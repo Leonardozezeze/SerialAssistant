@@ -9,7 +9,9 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override = default;
-
 private:
-    QLabel *m_centralLabel = nullptr;
+    void ShowMenu();
+    void ShowToolBar();
+protected:
+
 };
