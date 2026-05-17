@@ -20,6 +20,9 @@ private:
     void ShowToolBar();
     void Receive_Area();
     void Show_StatusBar();
+    QTimer *autoSaveTimer=nullptr;
+    QToolBar *SCtoolBar =nullptr;
+    QToolBar *SHCtoolBar =nullptr;
     LabeledComboBox *portcombo = nullptr;
     QPushButton *StartBtn = nullptr;
     LabeledComboBox *baudratecombo = nullptr;
@@ -47,5 +50,7 @@ private slots:
     void Senddata();
     void Clearsendedit();
     void onReadyRead();
+    void onAutoSaveFile();
+    void Display2Begin();
 protected:
 };

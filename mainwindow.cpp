@@ -24,20 +24,37 @@ MainWindow::MainWindow(QWidget *parent)
     QTimer *portTimer = new QTimer(this);
     connect(portTimer, &QTimer::timeout, this, &MainWindow::refreshSerialPorts);
     portTimer->start(2000); // 每2秒刷新一次
+    autoSaveTimer = new QTimer(this);
+    autoSaveTimer->setInterval(60); // 每5分钟触发一次，可按需调整
+    connect(autoSaveTimer, &QTimer::timeout, this, &MainWindow::onAutoSaveFile);
 }
 void MainWindow::ShowMenu()
 {
     QMenuBar *menuBar = this->menuBar();
-    QMenu *fileMenu = menuBar->addMenu("文件"); // 以后留着设计 先不管考虑功能
+    QMenu *fileMenu = menuBar->addMenu("文件");
+    QAction *saveAction = fileMenu->addAction("保存接收区");
+    QAction *importAction = fileMenu->addAction("导入文件");
     QMenu *seeMenu = menuBar->addMenu("查看");
-    QMenu *helpMenu = menuBar->addMenu("帮助");
-    QMenu *aboutMenu = menuBar->addMenu("关于");
+    QAction *DefautPlay = seeMenu->addAction("恢复默认布局");
+    QAction *helpAction = menuBar->addAction("帮助");
+    QAction *aboutAction = menuBar->addAction("关于");
+    connect(saveAction, &QAction::triggered, this, &MainWindow::Save2File);
+    connect(importAction, &QAction::triggered, this, &MainWindow::ImportFromFile);
+    connect(DefautPlay, &QAction::triggered, this, &MainWindow::Display2Begin);
+    connect(helpAction, &QAction::triggered, this, [this]()
+            {
+    // 显示关于对话框
+    QMessageBox::about(this, "帮助", "教程文档正在制作ing....."); });
+    connect(aboutAction, &QAction::triggered, this, [this]()
+            {
+    // 显示关于对话框
+    QMessageBox::about(this, "关于", "串口助手 v1.0\n制作:Cassian"); });
 }
 void MainWindow::ShowToolBar()
 {
-    QToolBar *SCtoolBar = addToolBar("Serial Config"); // 串口配置工具栏
+    SCtoolBar = addToolBar("Serial Config"); // 串口配置工具栏
     addToolBar(Qt::TopToolBarArea, SCtoolBar);
-    QToolBar *SHCtoolBar = addToolBar("Show Config"); // 显示配置工具栏
+    SHCtoolBar = addToolBar("Show Config"); // 显示配置工具栏
     addToolBar(Qt::LeftToolBarArea, SHCtoolBar);
 
     QWidget *SCcontainer = new QWidget(this);
@@ -227,8 +244,8 @@ void MainWindow::ShowToolBar()
         if(text=="GBK")
             m_sendCodec=Codec::GBK; });
     connect(saveBtn, &QPushButton::clicked, this, &MainWindow::Save2File);
-    connect(clearrecvBtn,&QPushButton::clicked,this,&MainWindow::ClearRecArea);
-    connect(FileBtn,&QPushButton::clicked,this,&MainWindow::ImportFromFile);
+    connect(clearrecvBtn, &QPushButton::clicked, this, &MainWindow::ClearRecArea);
+    connect(FileBtn, &QPushButton::clicked, this, &MainWindow::ImportFromFile);
     // RTS 复选框
     connect(RTScheckBox, &QCheckBox::toggled, this, [this](bool checked)
             {
@@ -246,7 +263,12 @@ void MainWindow::ShowToolBar()
     connect(savecheckBox, &QCheckBox::toggled, this, [this](bool checked)
             {
         autosave = checked;
-        qDebug() << "自动保存:" << (checked ? "启用" : "禁用"); });
+        qDebug() << "自动保存:" << (checked ? "启用" : "禁用"); 
+            if (checked) {
+        autoSaveTimer->start();   // 启动定时器
+    } else {
+        autoSaveTimer->stop();    // 停止定时器
+    } });
     connect(timecheckBox, &QCheckBox::toggled, this, [this](bool checked)
             {
         timestamp=checked;
@@ -303,8 +325,8 @@ void MainWindow::Receive_Area()
     layout->addWidget(sendEdit);
     layout->addLayout(btnLayout);
 
-    connect(sendBtn,&QPushButton::clicked,this,&MainWindow::Senddata);
-    connect(clearBtn,&QPushButton::clicked,this,&MainWindow::Clearsendedit);
+    connect(sendBtn, &QPushButton::clicked, this, &MainWindow::Senddata);
+    connect(clearBtn, &QPushButton::clicked, this, &MainWindow::Clearsendedit);
 }
 
 void MainWindow::Show_StatusBar()
@@ -453,15 +475,17 @@ void MainWindow::StartSerialPort(bool checked)
 }
 void MainWindow::Save2File()
 {
-    if (!recvEdit || recvEdit->toPlainText().isEmpty()) {
+    if (!recvEdit || recvEdit->toPlainText().isEmpty())
+    {
         QMessageBox::information(this, "提示", "接收区没有数据可保存");
         return;
     }
-    QString fileName=QFileDialog::getSaveFileName(this,"保存接收数据",QDir::homePath(),"文本文件 (*.txt);;所有文件 (*)");
-    if (fileName.isEmpty()) return;  // 用户取消
+    QString fileName = QFileDialog::getSaveFileName(this, "保存接收数据", QDir::homePath(), "文本文件 (*.txt);;所有文件 (*)");
+    if (fileName.isEmpty())
+        return; // 用户取消
     // 将接收区纯文本写入文件
     QFile file(fileName);
-    if(file.open(QIODevice::WriteOnly | QIODevice::Text))
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text))
     {
         QTextStream stream(&file);
         stream << recvEdit->toPlainText();
@@ -476,18 +500,22 @@ void MainWindow::Save2File()
 void MainWindow::ImportFromFile()
 {
     QString fileName = QFileDialog::getOpenFileName(this,
-        "选择文件",
-        QDir::homePath(),
-        "文本文件 (*.txt);;所有文件 (*)");
-    if (fileName.isEmpty()) return;
+                                                    "选择文件",
+                                                    QDir::homePath(),
+                                                    "文本文件 (*.txt);;所有文件 (*)");
+    if (fileName.isEmpty())
+        return;
 
     QFile file(fileName);
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
         QTextStream stream(&file);
         QString content = stream.readAll();
         file.close();
         sendEdit->setPlainText(content);
-    } else {
+    }
+    else
+    {
         QMessageBox::critical(this, "错误", "无法打开文件：" + file.errorString());
     }
 }
@@ -497,57 +525,79 @@ void MainWindow::ClearRecArea()
 }
 void MainWindow::Senddata()
 {
-    if (!m_serial || !m_serial->isOpen()) {
+    if (!m_serial || !m_serial->isOpen())
+    {
         qDebug() << "串口未打开，不能发送";
         return;
     }
     QString text = sendEdit->toPlainText();
-    if (text.isEmpty()) return;
+    if (text.isEmpty())
+        return;
 
     QByteArray data;
 
     // 1. 根据发送模式转换
-    if (m_sendMode == ShowMode::Text) {
-        if (m_sendCodec == Codec::UTF8) {
+    if (m_sendMode == ShowMode::Text)
+    {
+        if (m_sendCodec == Codec::UTF8)
+        {
             data = text.toUtf8();
-        } else { // GBK
+        }
+        else
+        {                              // GBK
             data = text.toLocal8Bit(); // Windows下为GBK
         }
-    } else { // Hex 模式
+    }
+    else
+    { // Hex 模式
         QString hexStr = text.simplified();
         hexStr.remove(' ');
         data = QByteArray::fromHex(hexStr.toLatin1());
-        if (data.isEmpty() && !hexStr.isEmpty()) {
+        if (data.isEmpty() && !hexStr.isEmpty())
+        {
             QMessageBox::warning(this, "错误", "无效的十六进制输入");
             return;
         }
     }
 
     // 2. 添加结束符
-    switch (m_endstr) {
-    case Endstr::CR:    data.append('\r'); break;
-    case Endstr::NL:    data.append('\n'); break;
-    case Endstr::CRNL:  data.append("\r\n"); break;
-    default: break;
+    switch (m_endstr)
+    {
+    case Endstr::CR:
+        data.append('\r');
+        break;
+    case Endstr::NL:
+        data.append('\n');
+        break;
+    case Endstr::CRNL:
+        data.append("\r\n");
+        break;
+    default:
+        break;
     }
 
     // 3. 发送
     qint64 written = m_serial->write(data);
-    if (written == -1) {
+    if (written == -1)
+    {
         QMessageBox::critical(this, "错误", "发送失败：" + m_serial->errorString());
-        return;  // 发送失败，不进行回显和清空
+        return; // 发送失败，不进行回显和清空
     }
 
     // 4. 发送成功后的回显（只有成功才显示）
     QString displayText;
-    if (m_sendMode == ShowMode::Text) {
-        displayText = text;  // 原始文本
-    } else {
-        displayText = data.toHex(' ').toUpper();  // 实际发送的十六进制
+    if (m_sendMode == ShowMode::Text)
+    {
+        displayText = text; // 原始文本
+    }
+    else
+    {
+        displayText = data.toHex(' ').toUpper(); // 实际发送的十六进制
     }
 
     // 添加时间戳（如果启用）
-    if (timestamp) {
+    if (timestamp)
+    {
         QString timeStr = QDateTime::currentDateTime().toString("hh:mm:ss.zzz");
         displayText = "[" + timeStr + "] " + displayText;
     }
@@ -561,7 +611,8 @@ void MainWindow::Senddata()
     qDebug() << "发送了" << written << "字节";
 
     // 5. 自动清空发送区
-    if (autoclear) {
+    if (autoclear)
+    {
         sendEdit->clear();
     }
 }
@@ -571,28 +622,74 @@ void MainWindow::Clearsendedit()
 }
 void MainWindow::onReadyRead()
 {
-    if (!m_serial || !m_serial->isOpen()) return;
+    if (!m_serial || !m_serial->isOpen())
+        return;
     QByteArray data = m_serial->readAll();
-    if (data.isEmpty()) return;
+    if (data.isEmpty())
+        return;
     QString displayText;
-    if (m_displayMode == ShowMode::Text) {
+    if (m_displayMode == ShowMode::Text)
+    {
         // 文本模式：按指定编码解码
-        if (m_receiveCodec == Codec::UTF8) {
+        if (m_receiveCodec == Codec::UTF8)
+        {
             displayText = QString::fromUtf8(data);
-        } else { // GBK
+        }
+        else
+        { // GBK
             displayText = QString::fromLocal8Bit(data);
         }
-    } else { // Hex 模式
+    }
+    else
+    { // Hex 模式
         displayText = data.toHex(' ').toUpper();
         // 可以让每个字节用大写字母，用空格分隔（toHex(' ') 已经加了空格）
     }
-     // 2. 添加时间戳（如果需要）
-    if (timestamp) {
+    // 2. 添加时间戳（如果需要）
+    if (timestamp)
+    {
         QString timeStr = QDateTime::currentDateTime().toString("hh:mm:ss.zzz");
         displayText = "[" + timeStr + "] " + displayText;
     }
     // 3. 显示到接收区
-    recvEdit->append("[RX]"+displayText);
+    recvEdit->append("[RX]" + displayText);
     // 4. 自动滚动到底部（可选，用户通常希望这样）
     recvEdit->moveCursor(QTextCursor::End);
+}
+void MainWindow::onAutoSaveFile()
+{
+    if (!autosave)
+        return;
+    if (!recvEdit || recvEdit->toPlainText().isEmpty())
+        return;
+
+    // 1. 定义保存目录
+    QString saveDir = QApplication::applicationDirPath() + "/AutoSaveFiles/";
+
+    // 2. 确保目录存在（不存在则创建）
+    QDir dir;
+    if (!dir.mkpath(saveDir)) {
+        qWarning() << "无法创建自动保存目录:" << saveDir;
+        return;
+    }
+
+    // 3. 生成带时间戳的文件名
+    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss");
+    QString fileName = saveDir + QString("autosave_received_%1.txt").arg(timestamp);
+
+    // 4. 静默写入
+    QFile file(fileName);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream stream(&file);
+        stream << recvEdit->toPlainText();
+        file.close();
+        qDebug() << "自动保存成功:" << fileName;
+    } else {
+        qWarning() << "自动保存失败:" << file.errorString();
+    }
+}
+void MainWindow::Display2Begin()
+{
+    addToolBar(Qt::TopToolBarArea, SCtoolBar);
+    addToolBar(Qt::LeftToolBarArea, SHCtoolBar);
 }
