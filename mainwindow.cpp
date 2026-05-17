@@ -13,7 +13,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     this->setWindowTitle("Serial Assistant");
-    this->resize(800, 600);
+    this->resize(900, 600);
     Receive_Area();
     ShowMenu();
     ShowToolBar();
@@ -390,18 +390,54 @@ void MainWindow::Show_StatusBar()
 }
 void MainWindow::refreshSerialPorts()
 {
-    // 获取可用串口列表
-    const auto serialPortInfos = QSerialPortInfo::availablePorts();
-    QStringList portList;
-    // 遍历列表，提取端口名称（如COM1, ttyUSB0）
-    for (const QSerialPortInfo &info : serialPortInfos)
+    QComboBox *combo = portcombo->comboBox();
+    if (!combo)
+        return;
+
+    // 1. 获取当前可用端口集合
+    const auto infos = QSerialPortInfo::availablePorts();
+    QSet<QString> availablePorts;
+    for (const auto &info : infos)
+        availablePorts.insert(info.portName());
+
+    // 2. 全程阻塞信号，避免中间操作触发槽函数
+    bool oldBlocked = combo->blockSignals(true);
+
+    // 3. 移除已经不存在的端口
+    for (int i = combo->count() - 1; i >= 0; --i)
     {
-        portList.append(info.portName() + " " + info.description());
-        // 存储纯端口名作为用户数据
-        portcombo->comboBox()->setItemData(portcombo->comboBox()->count() - 1, info.portName());
+        if (!availablePorts.contains(combo->itemData(i).toString()))
+        {
+            // 如果当前有串口打开，先关闭它
+            if (m_serial->isOpen() && m_serial->portName() == combo->itemData(i).toString())
+            {
+                m_serial->close();
+                QIcon iconBlack(":/blackicon.png");
+                // 设置初始图标和文本
+                StartBtn->setChecked(false);
+                StartBtn->setText("  打开串口"); // 文本与图标之间的空格可自行调整
+                StartBtn->setIcon(iconBlack);
+                StartBtn->setIconSize(QSize(35, 20)); // 根据图标实际尺寸调整
+            }
+            combo->removeItem(i);
+        }
     }
-    portcombo->comboBox()->clear();
-    portcombo->addItems(portList);
+    // 4. 添加新端口
+    for (const auto &info : infos)
+    {
+        if (combo->findData(info.portName()) == -1)
+        {
+            combo->addItem(info.portName() + " " + info.description(), info.portName());
+        }
+    }
+
+    // 5. 处理选中项消失后的状态
+    if (combo->currentIndex() == -1 && combo->count() > 0)
+    {
+        combo->setCurrentIndex(0); // 由于信号被阻塞，不会触发自动连接
+    }
+    // 6. 恢复信号，此时界面已稳定，可手动触发一次状态同步（非必需）
+    combo->blockSignals(oldBlocked);
 }
 void MainWindow::StartSerialPort(bool checked)
 {
@@ -468,6 +504,7 @@ void MainWindow::StartSerialPort(bool checked)
     }
     else
     {
+        m_serial->close();
         QIcon iconBlack(":/blackicon.png");
         // 设置初始图标和文本
         StartBtn->setText("  打开串口"); // 文本与图标之间的空格可自行调整
@@ -673,7 +710,8 @@ void MainWindow::onAutoSaveFile()
 
     // 2. 确保目录存在（不存在则创建）
     QDir dir;
-    if (!dir.mkpath(saveDir)) {
+    if (!dir.mkpath(saveDir))
+    {
         qWarning() << "无法创建自动保存目录:" << saveDir;
         return;
     }
@@ -684,12 +722,15 @@ void MainWindow::onAutoSaveFile()
 
     // 4. 静默写入
     QFile file(fileName);
-    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
         QTextStream stream(&file);
         stream << recvEdit->toPlainText();
         file.close();
         qDebug() << "自动保存成功:" << fileName;
-    } else {
+    }
+    else
+    {
         qWarning() << "自动保存失败:" << file.errorString();
     }
 }
@@ -700,7 +741,7 @@ void MainWindow::Display2Begin()
 }
 void MainWindow::UpdateSR()
 {
-    statusLabel->setText(QString("串口状态: %1       ").arg(m_serial && m_serial->isOpen() ? "已连接" : "未连接")+"R:"+QString::number(m_receivedtimes)+"       S:"+QString::number(m_sendtimes));
+    statusLabel->setText(QString("串口状态: %1       ").arg(m_serial && m_serial->isOpen() ? "已连接" : "未连接") + "R:" + QString::number(m_receivedtimes) + "       S:" + QString::number(m_sendtimes));
 }
 void MainWindow::closeEvent(QCloseEvent *event)
 {
