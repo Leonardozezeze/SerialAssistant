@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>redicon.png</file>
+        <file>blakicon.png</file>
+    </qresource>
+</RCC>
