@@ -16,7 +16,7 @@ public:
         m_comboBox = new QComboBox(this);
 
         // 设置默认大小
-        m_comboBox->setMinimumWidth(50);   // 默认最小50像素
+        m_comboBox->setMinimumWidth(40);   // 默认最小40像素
         m_comboBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         
         // 标签默认右对齐，更美观
