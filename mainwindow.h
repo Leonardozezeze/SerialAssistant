@@ -32,6 +32,7 @@ private:
     QSerialPort *m_serial = nullptr;
     QTextEdit *recvEdit = nullptr;
     QTextEdit *sendEdit =nullptr;
+    QLabel *statusLabel=nullptr;
     ShowMode m_displayMode = ShowMode::Text;
     ShowMode m_sendMode = ShowMode::Text;
     Codec m_receiveCodec = Codec::UTF8;
@@ -41,6 +42,8 @@ private:
     bool timestamp=false;
     bool entersend=false;
     bool autoclear=false;
+    qint32 m_receivedtimes = 0;
+    qint32 m_sendtimes = 0;
 private slots:
     void refreshSerialPorts();
     void StartSerialPort(bool checked);
@@ -52,5 +55,7 @@ private slots:
     void onReadyRead();
     void onAutoSaveFile();
     void Display2Begin();
+    void UpdateSR();
+    void closeEvent(QCloseEvent *event);
 protected:
 };

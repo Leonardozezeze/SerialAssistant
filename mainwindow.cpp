@@ -339,7 +339,8 @@ void MainWindow::Show_StatusBar()
     container->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     // 创建三个标签
     QLabel *readyLabel = new QLabel("Ready", this);
-    QLabel *statusLabel = new QLabel("R:    S:    ", this);
+    statusLabel = new QLabel(this);
+    UpdateSR();
     QLabel *timeLabel = new QLabel(this);
 
     // 创建两条竖线（灰色阴影效果）
@@ -399,6 +400,7 @@ void MainWindow::refreshSerialPorts()
         // 存储纯端口名作为用户数据
         portcombo->comboBox()->setItemData(portcombo->comboBox()->count() - 1, info.portName());
     }
+    portcombo->comboBox()->clear();
     portcombo->addItems(portList);
 }
 void MainWindow::StartSerialPort(bool checked)
@@ -609,7 +611,8 @@ void MainWindow::Senddata()
     recvEdit->moveCursor(QTextCursor::End);
 
     qDebug() << "发送了" << written << "字节";
-
+    m_sendtimes++;
+    UpdateSR();
     // 5. 自动清空发送区
     if (autoclear)
     {
@@ -653,6 +656,8 @@ void MainWindow::onReadyRead()
     }
     // 3. 显示到接收区
     recvEdit->append("[RX]" + displayText);
+    m_receivedtimes++;
+    UpdateSR();
     // 4. 自动滚动到底部（可选，用户通常希望这样）
     recvEdit->moveCursor(QTextCursor::End);
 }
@@ -692,4 +697,16 @@ void MainWindow::Display2Begin()
 {
     addToolBar(Qt::TopToolBarArea, SCtoolBar);
     addToolBar(Qt::LeftToolBarArea, SHCtoolBar);
+}
+void MainWindow::UpdateSR()
+{
+    statusLabel->setText(QString("串口状态: %1       ").arg(m_serial && m_serial->isOpen() ? "已连接" : "未连接")+"R:"+QString::number(m_receivedtimes)+"       S:"+QString::number(m_sendtimes));
+}
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    if (m_serial && m_serial->isOpen())
+    {
+        m_serial->close();
+    }
+    event->accept(); // 继续关闭窗口
 }
