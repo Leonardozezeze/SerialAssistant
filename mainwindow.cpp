@@ -18,12 +18,15 @@ MainWindow::MainWindow(QWidget *parent)
     Receive_Area();
     ShowMenu();
     ShowToolBar();
-    statusBar()->showMessage("Ready");
+    Show_StatusBar();
 }
 void MainWindow::ShowMenu()
 {
     QMenuBar *menuBar = this->menuBar();
-    QMenu *fileMenu = menuBar->addMenu("File"); // 以后留着设计 先不管考虑功能
+    QMenu *fileMenu = menuBar->addMenu("文件"); // 以后留着设计 先不管考虑功能
+    QMenu *seeMenu = menuBar->addMenu("查看");
+    QMenu *helpMenu = menuBar->addMenu("帮助");
+    QMenu *aboutMenu = menuBar->addMenu("关于");
 }
 void MainWindow::ShowToolBar()
 {
@@ -32,12 +35,12 @@ void MainWindow::ShowToolBar()
     QToolBar *SHCtoolBar = addToolBar("Show Config"); // 显示配置工具栏
     addToolBar(Qt::LeftToolBarArea, SHCtoolBar);
 
-    QWidget *SCcontainer =new QWidget(this);
+    QWidget *SCcontainer = new QWidget(this);
     QBoxLayout *SCLayout = new QBoxLayout(QBoxLayout::LeftToRight, SCcontainer);
     SCLayout->setContentsMargins(0, 0, 0, 0);
     SCLayout->setSpacing(25);
     SCtoolBar->addWidget(SCcontainer);
-    
+
     LabeledComboBox *portcombo = new LabeledComboBox("串口:", this);
     portcombo->addItems({"COM1", "COM2", "COM3"}); // 留着获得实际的串口调用 注意以后修改
     SCLayout->addWidget(portcombo);
@@ -71,7 +74,7 @@ void MainWindow::ShowToolBar()
     StartBtn->setIconSize(QSize(20, 24)); // 根据图标实际尺寸调整
     SCLayout->addWidget(StartBtn);
 
-    QWidget *SHCcontainer =new QWidget(this);
+    QWidget *SHCcontainer = new QWidget(this);
     QBoxLayout *SHCLayout = new QBoxLayout(QBoxLayout::TopToBottom, SHCcontainer);
     SHCLayout->setContentsMargins(0, 0, 0, 0);
     SHCLayout->setSpacing(6);
@@ -79,7 +82,7 @@ void MainWindow::ShowToolBar()
 
     QLabel *showlabel = new QLabel("显示配置:", this);
     SHCLayout->addWidget(showlabel);
-    QFont font = showlabel->font();      // 获取当前字体
+    QFont font = showlabel->font(); // 获取当前字体
     font.setPointSize(9);           // 设置字号（单位：磅）
     font.setBold(true);             // 设置加粗
     showlabel->setFont(font);       // 应用字体设置
@@ -112,49 +115,49 @@ void MainWindow::ShowToolBar()
     QCheckBox *timecheckBox = new QCheckBox("时间戳", this);
     timecheckBox->setChecked(false); // 初始未选中
     SHCLayout->addWidget(timecheckBox);
-    
+
     QPushButton *clearrecvBtn = new QPushButton("清空接收", this);
     SHCLayout->addWidget(clearrecvBtn);
 
     QFrame *hline = new QFrame;
     hline->setFrameShape(QFrame::HLine);
-    hline->setFrameShadow(QFrame::Sunken);   // 可选阴影效果
+    hline->setFrameShadow(QFrame::Sunken); // 可选阴影效果
     SHCLayout->addWidget(hline);
 
     QLabel *sendlabel = new QLabel("发送配置:", this);
     SHCLayout->addWidget(sendlabel);
-    font = sendlabel->font();      // 获取当前字体
-    font.setPointSize(9);           // 设置字号（单位：磅）
-    font.setBold(true);             // 设置加粗
-    sendlabel->setFont(font);       // 应用字体设置
+    font = sendlabel->font(); // 获取当前字体
+    font.setPointSize(9);     // 设置字号（单位：磅）
+    font.setBold(true);       // 设置加粗
+    sendlabel->setFont(font); // 应用字体设置
 
-    LabeledComboBox *sendmcobo = new LabeledComboBox("发送形式:",this);
-    sendmcobo->addItems({"文本","Hex"});
+    LabeledComboBox *sendmcobo = new LabeledComboBox("发送形式:", this);
+    sendmcobo->addItems({"文本", "Hex"});
     SHCLayout->addWidget(sendmcobo);
     sendmcobo->comboBox()->setCurrentIndex(0);
 
-    LabeledComboBox *sendcodecobo = new LabeledComboBox("编码:",this);
-    sendcodecobo->addItems({"UTF-8","GBK"});
+    LabeledComboBox *sendcodecobo = new LabeledComboBox("编码:", this);
+    sendcodecobo->addItems({"UTF-8", "GBK"});
     SHCLayout->addWidget(sendcodecobo);
     sendcodecobo->comboBox()->setCurrentIndex(0);
 
-    LabeledComboBox *sendendcobo = new LabeledComboBox("结束符:",this);
-    sendendcobo->addItems({"None","\\n+\\r","\\n","\\r"});
+    LabeledComboBox *sendendcobo = new LabeledComboBox("结束符:", this);
+    sendendcobo->addItems({"None", "\\n+\\r", "\\n", "\\r"});
     SHCLayout->addWidget(sendendcobo);
     sendendcobo->comboBox()->setCurrentIndex(0);
 
-    QCheckBox *entercheckBox = new QCheckBox("回车发送",this);
+    QCheckBox *entercheckBox = new QCheckBox("回车发送", this);
     entercheckBox->setChecked(false); // 初始未选中
     SHCLayout->addWidget(entercheckBox);
 
-    QCheckBox *clearcheckBox = new QCheckBox("自动清空",this);
+    QCheckBox *clearcheckBox = new QCheckBox("自动清空", this);
     clearcheckBox->setChecked(false); // 初始未选中
     SHCLayout->addWidget(clearcheckBox);
 
-    QPushButton *FileBtn = new QPushButton("从文件导入",this);
+    QPushButton *FileBtn = new QPushButton("从文件导入", this);
     SHCLayout->addWidget(FileBtn);
 
-    QPushButton *advancesendBtn = new QPushButton("高级发送",this);
+    QPushButton *advancesendBtn = new QPushButton("高级发送", this);
     SHCLayout->addWidget(advancesendBtn);
 
     // 处理选择
@@ -229,4 +232,63 @@ void MainWindow::Receive_Area()
     layout->addWidget(sendLabel);
     layout->addWidget(sendEdit);
     layout->addLayout(btnLayout);
+}
+
+void MainWindow::Show_StatusBar()
+{
+    QStatusBar *statusBar = this->statusBar();
+    QWidget *container = new QWidget(this);
+    QHBoxLayout *layout = new QHBoxLayout(container);
+    layout->setContentsMargins(0, 0, 0, 0); // 移除内边距，使布局紧凑
+    layout->setSpacing(0);                  // 先将间距设0，用stretch控制距离
+    container->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    // 创建三个标签
+    QLabel *readyLabel = new QLabel("Ready", this);
+    QLabel *statusLabel = new QLabel("R:    S:    ", this);
+    QLabel *timeLabel = new QLabel(this);
+
+    // 创建两条竖线（灰色阴影效果）
+    auto createVLine = []() -> QFrame *
+    {
+        QFrame *line = new QFrame;
+        line->setFrameShape(QFrame::VLine);
+        line->setFrameShadow(QFrame::Sunken);                // 阴影效果（凹陷）
+        line->setStyleSheet("QFrame { background: gray; }"); // 确保灰色
+        line->setFixedWidth(2);                              // 宽度加一点更明显
+        return line;
+    };
+    QFrame *vline1 = createVLine();
+    QFrame *vline2 = createVLine();
+
+    // 为所有需要拉伸的控件设置大小策略（水平方向可拉伸）
+    readyLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    statusLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    timeLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    // 竖线固定大小，不拉伸
+    vline1->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
+    vline2->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
+
+    // 按顺序添加到布局，并在每一项周围添加弹性空间，实现等距分布
+    layout->addStretch(); // 左端弹性空间
+    layout->addWidget(readyLabel);
+    layout->addStretch(); // 标签1与竖线1之间的弹性空间
+    layout->addWidget(vline1);
+    layout->addStretch(); // 竖线1与标签2之间的弹性空间
+    layout->addWidget(statusLabel);
+    layout->addStretch(); // 标签2与竖线2之间的弹性空间
+    layout->addWidget(vline2);
+    layout->addStretch(); // 竖线2与标签3之间的弹性空间
+    layout->addWidget(timeLabel);
+    layout->addStretch(); // 右端弹性空间
+
+    statusBar->addWidget(container, 1);
+
+    // 设置时间更新定时器
+    QTimer *timer = new QTimer(this);
+    connect(timer, &QTimer::timeout, this, [=]()
+            {
+        QString currentTime = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
+        timeLabel->setText("当前时间:" + currentTime); });
+    timer->start(1000);
+    timeLabel->setText("当前时间:" + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
 }

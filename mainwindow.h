@@ -11,6 +11,7 @@ private:
     void ShowMenu();
     void ShowToolBar();
     void Receive_Area();
+    void Show_StatusBar();
 protected:
 
 };
