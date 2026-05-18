@@ -538,9 +538,12 @@ void MainWindow::Save2File()
     if (file.open(QIODevice::WriteOnly | QIODevice::Text))
     {
         QTextStream stream(&file);
+        // 明确设定编码为 UTF-8，并写入 BOM（可选）
+        stream.setEncoding(QStringConverter::Utf8);
+        stream.setGenerateByteOrderMark(true);  // 写入 UTF-8 BOM
         stream << recvEdit->toPlainText();
         file.close();
-        QMessageBox::information(this, "成功", "文件已保存");
+        QMessageBox::information(this, "成功", "文件已保存（UTF-8 编码）");
     }
     else
     {
@@ -724,9 +727,12 @@ void MainWindow::onAutoSaveFile()
     if (file.open(QIODevice::WriteOnly | QIODevice::Text))
     {
         QTextStream stream(&file);
+        // 显式设置为 UTF-8 编码，并写入 BOM（字节顺序标记）
+        stream.setEncoding(QStringConverter::Utf8);
+        stream.setGenerateByteOrderMark(true);
         stream << recvEdit->toPlainText();
         file.close();
-        qDebug() << "自动保存成功:" << fileName;
+        qDebug() << "自动保存成功（UTF-8）:" << fileName;
     }
     else
     {
