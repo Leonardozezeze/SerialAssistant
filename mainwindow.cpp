@@ -9,11 +9,12 @@
 #include <QIntValidator>
 #include <QFrame>
 #include <QStringEncoder>
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     this->setWindowTitle("Serial Assistant");
-    this->resize(900, 600);
+    this->resize(1000, 600);
     Receive_Area();
     ShowMenu();
     ShowToolBar();
@@ -23,11 +24,15 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_serial, &QSerialPort::readyRead, this, &MainWindow::onReadyRead);
     QTimer *portTimer = new QTimer(this);
     connect(portTimer, &QTimer::timeout, this, &MainWindow::refreshSerialPorts);
-    portTimer->start(2000); // 每2秒刷新一次
+    portTimer->start(2000);
     autoSaveTimer = new QTimer(this);
-    autoSaveTimer->setInterval(60); // 每5分钟触发一次，可按需调整
+    autoSaveTimer->setInterval(5 * 60 * 1000); // 5分钟
     connect(autoSaveTimer, &QTimer::timeout, this, &MainWindow::onAutoSaveFile);
+    
+    // 初始化解码器为UTF-8
+    setDecoderForCodec(Codec::UTF8);
 }
+
 void MainWindow::ShowMenu()
 {
     QMenuBar *menuBar = this->menuBar();
@@ -43,18 +48,17 @@ void MainWindow::ShowMenu()
     connect(DefautPlay, &QAction::triggered, this, &MainWindow::Display2Begin);
     connect(helpAction, &QAction::triggered, this, [this]()
             {
-    // 显示关于对话框
     QMessageBox::about(this, "帮助", "教程文档正在制作ing....."); });
     connect(aboutAction, &QAction::triggered, this, [this]()
             {
-    // 显示关于对话框
     QMessageBox::about(this, "关于", "串口助手 v1.0\n制作:Cassian"); });
 }
+
 void MainWindow::ShowToolBar()
 {
-    SCtoolBar = addToolBar("Serial Config"); // 串口配置工具栏
+    SCtoolBar = addToolBar("Serial Config");
     addToolBar(Qt::TopToolBarArea, SCtoolBar);
-    SHCtoolBar = addToolBar("Show Config"); // 显示配置工具栏
+    SHCtoolBar = addToolBar("Show Config");
     addToolBar(Qt::LeftToolBarArea, SHCtoolBar);
 
     QWidget *SCcontainer = new QWidget(this);
@@ -85,13 +89,12 @@ void MainWindow::ShowToolBar()
     SCLayout->addWidget(paritycobo);
 
     StartBtn = new QPushButton(this);
-    StartBtn->setCheckable(true); // 启用开关状态
-    StartBtn->setChecked(false);  // 初始状态: 关闭(false) 或 开启(true)
+    StartBtn->setCheckable(true);
+    StartBtn->setChecked(false);
     QIcon iconBlack(":/blackicon.png");
-    // 设置初始图标和文本
-    StartBtn->setText("  打开串口"); // 文本与图标之间的空格可自行调整
+    StartBtn->setText("  打开串口");
     StartBtn->setIcon(iconBlack);
-    StartBtn->setIconSize(QSize(35, 20)); // 根据图标实际尺寸调整
+    StartBtn->setIconSize(QSize(35, 20));
     SCLayout->addWidget(StartBtn);
 
     QWidget *SHCcontainer = new QWidget(this);
@@ -102,10 +105,10 @@ void MainWindow::ShowToolBar()
 
     QLabel *showlabel = new QLabel("显示配置:", this);
     SHCLayout->addWidget(showlabel);
-    QFont font = showlabel->font(); // 获取当前字体
-    font.setPointSize(9);           // 设置字号（单位：磅）
-    font.setBold(true);             // 设置加粗
-    showlabel->setFont(font);       // 应用字体设置
+    QFont font = showlabel->font();
+    font.setPointSize(9);
+    font.setBold(true);
+    showlabel->setFont(font);
 
     LabeledComboBox *showmcobo = new LabeledComboBox("显示形式:", this);
     showmcobo->addItems({"文本", "Hex"});
@@ -121,19 +124,19 @@ void MainWindow::ShowToolBar()
     SHCLayout->addWidget(saveBtn);
 
     QCheckBox *RTScheckBox = new QCheckBox("RTS", this);
-    RTScheckBox->setChecked(false); // 初始未选中
+    RTScheckBox->setChecked(false);
     SHCLayout->addWidget(RTScheckBox);
 
     QCheckBox *DTRcheckBox = new QCheckBox("DTR", this);
-    DTRcheckBox->setChecked(false); // 初始未选中
+    DTRcheckBox->setChecked(false);
     SHCLayout->addWidget(DTRcheckBox);
 
     QCheckBox *savecheckBox = new QCheckBox("自动保存", this);
-    savecheckBox->setChecked(false); // 初始未选中
+    savecheckBox->setChecked(false);
     SHCLayout->addWidget(savecheckBox);
 
     QCheckBox *timecheckBox = new QCheckBox("时间戳", this);
-    timecheckBox->setChecked(false); // 初始未选中
+    timecheckBox->setChecked(false);
     SHCLayout->addWidget(timecheckBox);
 
     QPushButton *clearrecvBtn = new QPushButton("清空接收", this);
@@ -141,15 +144,15 @@ void MainWindow::ShowToolBar()
 
     QFrame *hline = new QFrame;
     hline->setFrameShape(QFrame::HLine);
-    hline->setFrameShadow(QFrame::Sunken); // 可选阴影效果
+    hline->setFrameShadow(QFrame::Sunken);
     SHCLayout->addWidget(hline);
 
     QLabel *sendlabel = new QLabel("发送配置:", this);
     SHCLayout->addWidget(sendlabel);
-    font = sendlabel->font(); // 获取当前字体
-    font.setPointSize(9);     // 设置字号（单位：磅）
-    font.setBold(true);       // 设置加粗
-    sendlabel->setFont(font); // 应用字体设置
+    font = sendlabel->font();
+    font.setPointSize(9);
+    font.setBold(true);
+    sendlabel->setFont(font);
 
     LabeledComboBox *sendmcobo = new LabeledComboBox("发送形式:", this);
     sendmcobo->addItems({"文本", "Hex"});
@@ -167,11 +170,11 @@ void MainWindow::ShowToolBar()
     sendendcobo->comboBox()->setCurrentIndex(0);
 
     QCheckBox *entercheckBox = new QCheckBox("回车发送", this);
-    entercheckBox->setChecked(false); // 初始未选中
+    entercheckBox->setChecked(false);
     SHCLayout->addWidget(entercheckBox);
 
     QCheckBox *clearcheckBox = new QCheckBox("自动清空", this);
-    clearcheckBox->setChecked(false); // 初始未选中
+    clearcheckBox->setChecked(false);
     SHCLayout->addWidget(clearcheckBox);
 
     QPushButton *FileBtn = new QPushButton("从文件导入", this);
@@ -185,7 +188,6 @@ void MainWindow::ShowToolBar()
             this, [this](const QString &text)
             {
         if (text == "自定义...") {
-            // 弹出输入对话框
             bool ok;
             QString customBaudrate = QInputDialog::getText(this, 
                 "自定义波特率", 
@@ -195,29 +197,25 @@ void MainWindow::ShowToolBar()
                 &ok);
             
             if (ok && !customBaudrate.isEmpty()) {
-                // 验证是否为数字
                 bool isNumber;
                 customBaudrate.toInt(&isNumber);
                 
                 if (isNumber) {
-                    // 添加到下拉框（在"自定义..."前面插入）
                     int index = baudratecombo->comboBox()->count() - 1;
                     baudratecombo->comboBox()->insertItem(index, customBaudrate);
                     baudratecombo->comboBox()->setCurrentText(customBaudrate);
                     qDebug() << "设置自定义波特率:" << customBaudrate;
                 } else {
                     QMessageBox::warning(this, "错误", "请输入有效的数字！");
-                    // 恢复上次的选择
                     baudratecombo->comboBox()->setCurrentIndex(2);
                 }
             } else {
-                // 用户取消，恢复默认选择
                 baudratecombo->comboBox()->setCurrentIndex(2);
             }
         } else {
-            // 正常波特率处理
             qDebug() << "波特率改变为:" << text;
         } });
+
     connect(StartBtn, &QPushButton::clicked, this, &MainWindow::StartSerialPort);
     connect(showmcobo->comboBox(), &QComboBox::currentTextChanged, this, [this](const QString &text)
             {
@@ -225,62 +223,76 @@ void MainWindow::ShowToolBar()
             m_displayMode=ShowMode::Text;
         if(text=="Hex")
             m_displayMode=ShowMode::Hex; });
+
+    // 修正：UTF-8 判断，并同步切换解码器
     connect(showcodecobo->comboBox(), &QComboBox::currentTextChanged, this, [this](const QString &text)
             {
-        if(text=="UTF8")
+        if(text=="UTF-8") {
             m_receiveCodec=Codec::UTF8;
-        if(text=="GBK")
-            m_receiveCodec=Codec::GBK; });
+            setDecoderForCodec(Codec::UTF8);
+        }
+        if(text=="GBK") {
+            m_receiveCodec=Codec::GBK;
+            setDecoderForCodec(Codec::GBK);
+        } });
+
     connect(sendmcobo->comboBox(), &QComboBox::currentTextChanged, this, [this](const QString &text)
             {
         if(text=="文本")
             m_sendMode=ShowMode::Text;
         if(text=="Hex")
             m_sendMode=ShowMode::Hex; });
+
     connect(sendcodecobo->comboBox(), &QComboBox::currentTextChanged, this, [this](const QString &text)
             {
-        if(text=="UTF8")
+        if(text=="UTF-8")
             m_sendCodec=Codec::UTF8;
         if(text=="GBK")
             m_sendCodec=Codec::GBK; });
+
     connect(saveBtn, &QPushButton::clicked, this, &MainWindow::Save2File);
     connect(clearrecvBtn, &QPushButton::clicked, this, &MainWindow::ClearRecArea);
     connect(FileBtn, &QPushButton::clicked, this, &MainWindow::ImportFromFile);
-    // RTS 复选框
+    
     connect(RTScheckBox, &QCheckBox::toggled, this, [this](bool checked)
             {
     if (m_serial && m_serial->isOpen()) {
         m_serial->setRequestToSend(checked);
         qDebug() << "RTS 设置为:" << (checked ? "高电平" : "低电平");
     } });
-    // DTR 复选框
+    
     connect(DTRcheckBox, &QCheckBox::toggled, this, [this](bool checked)
             {
     if (m_serial && m_serial->isOpen()) {
         m_serial->setDataTerminalReady(checked);
         qDebug() << "DTR 设置为:" << (checked ? "高电平" : "低电平");
     } });
+    
     connect(savecheckBox, &QCheckBox::toggled, this, [this](bool checked)
             {
         autosave = checked;
         qDebug() << "自动保存:" << (checked ? "启用" : "禁用"); 
             if (checked) {
-        autoSaveTimer->start();   // 启动定时器
+        autoSaveTimer->start();
     } else {
-        autoSaveTimer->stop();    // 停止定时器
+        autoSaveTimer->stop();
     } });
+    
     connect(timecheckBox, &QCheckBox::toggled, this, [this](bool checked)
             {
         timestamp=checked;
         qDebug()<<"时间戳:"<< (checked ? "启用" : "禁用"); });
+    
     connect(entercheckBox, &QCheckBox::toggled, this, [this](bool checked)
             {
         entersend=checked;
         qDebug()<<"回车发送:"<< (checked ? "启用" : "禁用"); });
+    
     connect(clearcheckBox, &QCheckBox::toggled, this, [this](bool checked)
             {
         autoclear=checked;
         qDebug()<<"自动清空:"<< (checked ? "启用" : "禁用"); });
+    
     connect(sendendcobo->comboBox(), &QComboBox::currentTextChanged, this, [this](const QString &text)
             {
         if(text=="None")
@@ -292,18 +304,16 @@ void MainWindow::ShowToolBar()
         if(text=="\\r")
             m_endstr=Endstr::CR; });
 }
+
 void MainWindow::Receive_Area()
 {
     QWidget *centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
-    // 主布局
     QVBoxLayout *layout = new QVBoxLayout(centralWidget);
-    // 接收区
     QLabel *recvLabel = new QLabel("接收区:", this);
     recvEdit = new QTextEdit(this);
     recvEdit->setReadOnly(true);
     recvEdit->setPlaceholderText("接收到的数据会显示在这里...");
-    // 发送区
     QLabel *sendLabel = new QLabel("发送区:", this);
     sendEdit = new QTextEdit(this);
     sendEdit->setPlaceholderText("输入要发送的数据...");
@@ -312,13 +322,11 @@ void MainWindow::Receive_Area()
     QPushButton *sendBtn = new QPushButton("发送", this);
     QPushButton *clearBtn = new QPushButton("清空发送", this);
 
-    // 按钮布局
     QHBoxLayout *btnLayout = new QHBoxLayout();
     btnLayout->addWidget(clearBtn);
     btnLayout->addStretch();
     btnLayout->addWidget(sendBtn);
 
-    // 添加到主布局
     layout->addWidget(recvLabel);
     layout->addWidget(recvEdit);
     layout->addWidget(sendLabel);
@@ -334,52 +342,47 @@ void MainWindow::Show_StatusBar()
     QStatusBar *statusBar = this->statusBar();
     QWidget *container = new QWidget(this);
     QHBoxLayout *layout = new QHBoxLayout(container);
-    layout->setContentsMargins(0, 0, 0, 0); // 移除内边距，使布局紧凑
-    layout->setSpacing(0);                  // 先将间距设0，用stretch控制距离
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
     container->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    // 创建三个标签
+    
     QLabel *readyLabel = new QLabel("Ready", this);
     statusLabel = new QLabel(this);
     UpdateSR();
     QLabel *timeLabel = new QLabel(this);
 
-    // 创建两条竖线（灰色阴影效果）
     auto createVLine = []() -> QFrame *
     {
         QFrame *line = new QFrame;
         line->setFrameShape(QFrame::VLine);
-        line->setFrameShadow(QFrame::Sunken);                // 阴影效果（凹陷）
-        line->setStyleSheet("QFrame { background: gray; }"); // 确保灰色
-        line->setFixedWidth(2);                              // 宽度加一点更明显
+        line->setFrameShadow(QFrame::Sunken);
+        line->setStyleSheet("QFrame { background: gray; }");
+        line->setFixedWidth(2);
         return line;
     };
     QFrame *vline1 = createVLine();
     QFrame *vline2 = createVLine();
 
-    // 为所有需要拉伸的控件设置大小策略（水平方向可拉伸）
     readyLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     statusLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     timeLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    // 竖线固定大小，不拉伸
     vline1->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
     vline2->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
 
-    // 按顺序添加到布局，并在每一项周围添加弹性空间，实现等距分布
-    layout->addStretch(); // 左端弹性空间
+    layout->addStretch();
     layout->addWidget(readyLabel);
-    layout->addStretch(); // 标签1与竖线1之间的弹性空间
+    layout->addStretch();
     layout->addWidget(vline1);
-    layout->addStretch(); // 竖线1与标签2之间的弹性空间
+    layout->addStretch();
     layout->addWidget(statusLabel);
-    layout->addStretch(); // 标签2与竖线2之间的弹性空间
+    layout->addStretch();
     layout->addWidget(vline2);
-    layout->addStretch(); // 竖线2与标签3之间的弹性空间
+    layout->addStretch();
     layout->addWidget(timeLabel);
-    layout->addStretch(); // 右端弹性空间
+    layout->addStretch();
 
     statusBar->addWidget(container, 1);
 
-    // 设置时间更新定时器
     QTimer *timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, [=]()
             {
@@ -388,41 +391,43 @@ void MainWindow::Show_StatusBar()
     timer->start(1000);
     timeLabel->setText("当前时间:" + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
 }
+
 void MainWindow::refreshSerialPorts()
 {
     QComboBox *combo = portcombo->comboBox();
     if (!combo)
         return;
 
-    // 1. 获取当前可用端口集合
     const auto infos = QSerialPortInfo::availablePorts();
     QSet<QString> availablePorts;
     for (const auto &info : infos)
         availablePorts.insert(info.portName());
 
-    // 2. 全程阻塞信号，避免中间操作触发槽函数
     bool oldBlocked = combo->blockSignals(true);
 
-    // 3. 移除已经不存在的端口
     for (int i = combo->count() - 1; i >= 0; --i)
     {
         if (!availablePorts.contains(combo->itemData(i).toString()))
         {
-            // 如果当前有串口打开，先关闭它
             if (m_serial->isOpen() && m_serial->portName() == combo->itemData(i).toString())
             {
                 m_serial->close();
                 QIcon iconBlack(":/blackicon.png");
-                // 设置初始图标和文本
                 StartBtn->setChecked(false);
-                StartBtn->setText("  打开串口"); // 文本与图标之间的空格可自行调整
+                StartBtn->setText("  打开串口");
                 StartBtn->setIcon(iconBlack);
-                StartBtn->setIconSize(QSize(35, 20)); // 根据图标实际尺寸调整
+                StartBtn->setIconSize(QSize(35, 20));
+                // ✅ 恢复串口配置控件
+                portcombo->comboBox()->setEnabled(true);
+                baudratecombo->comboBox()->setEnabled(true);
+                stopbitscobo->comboBox()->setEnabled(true);
+                databitscobo->comboBox()->setEnabled(true);
+                paritycobo->comboBox()->setEnabled(true);
+                UpdateSR();
             }
             combo->removeItem(i);
         }
     }
-    // 4. 添加新端口
     for (const auto &info : infos)
     {
         if (combo->findData(info.portName()) == -1)
@@ -431,27 +436,22 @@ void MainWindow::refreshSerialPorts()
         }
     }
 
-    // 5. 处理选中项消失后的状态
     if (combo->currentIndex() == -1 && combo->count() > 0)
     {
-        combo->setCurrentIndex(0); // 由于信号被阻塞，不会触发自动连接
+        combo->setCurrentIndex(0);
     }
-    // 6. 恢复信号，此时界面已稳定，可手动触发一次状态同步（非必需）
     combo->blockSignals(oldBlocked);
 }
+
 void MainWindow::StartSerialPort(bool checked)
 {
     if (checked)
     {
         QIcon iconRed(":/redicon.png");
 
-        // 获取串口名（从 itemData 中取纯端口名）
         QString portName = portcombo->comboBox()->currentData().toString();
-
-        // 波特率
         qint32 baud = baudratecombo->comboBox()->currentText().toInt();
 
-        // 停止位
         QString stopbitstr = stopbitscobo->comboBox()->currentText();
         QSerialPort::StopBits stopBits;
         if (stopbitstr == "1")
@@ -461,7 +461,6 @@ void MainWindow::StartSerialPort(bool checked)
         else if (stopbitstr == "2")
             stopBits = QSerialPort::TwoStop;
 
-        // 数据位
         QString databitstr = databitscobo->comboBox()->currentText();
         QSerialPort::DataBits dataBits;
         if (databitstr == "5")
@@ -473,7 +472,6 @@ void MainWindow::StartSerialPort(bool checked)
         else if (databitstr == "8")
             dataBits = QSerialPort::Data8;
 
-        // 校验位
         QString paritystr = paritycobo->comboBox()->currentText();
         QSerialPort::Parity parity;
         if (paritystr == "None")
@@ -482,22 +480,29 @@ void MainWindow::StartSerialPort(bool checked)
             parity = QSerialPort::EvenParity;
         else if (paritystr == "Odd")
             parity = QSerialPort::OddParity;
+
+        // 先配置所有参数，再打开串口
         m_serial->setPortName(portName);
+        m_serial->setBaudRate(baud);
+        m_serial->setStopBits(stopBits);
+        m_serial->setDataBits(dataBits);
+        m_serial->setParity(parity);
+
         if (m_serial->open(QIODevice::ReadWrite))
         {
-            m_serial->setBaudRate(baud);
-            m_serial->setStopBits(stopBits);
-            m_serial->setDataBits(dataBits);
-            m_serial->setParity(parity);
-            // 流控等可以后面再加
-            // 设置初始图标和文本
-            StartBtn->setText("  关闭串口"); // 文本与图标之间的空格可自行调整
+            StartBtn->setText("  关闭串口");
             StartBtn->setIcon(iconRed);
-            StartBtn->setIconSize(QSize(35, 20)); // 根据图标实际尺寸调整
+            StartBtn->setIconSize(QSize(35, 20));
+            UpdateSR();
+            // ✅ 禁用串口配置控件
+            portcombo->comboBox()->setEnabled(false);
+            baudratecombo->comboBox()->setEnabled(false);
+            stopbitscobo->comboBox()->setEnabled(false);
+            databitscobo->comboBox()->setEnabled(false);
+            paritycobo->comboBox()->setEnabled(false);
         }
         else
         {
-            // 5. 如果打开失败，弹窗警告，并让按钮弹回"打开"状态
             QMessageBox::critical(this, "错误", "无法打开串口 " + portName);
             StartBtn->setChecked(false);
         }
@@ -506,12 +511,19 @@ void MainWindow::StartSerialPort(bool checked)
     {
         m_serial->close();
         QIcon iconBlack(":/blackicon.png");
-        // 设置初始图标和文本
-        StartBtn->setText("  打开串口"); // 文本与图标之间的空格可自行调整
+        StartBtn->setText("  打开串口");
         StartBtn->setIcon(iconBlack);
-        StartBtn->setIconSize(QSize(35, 20)); // 根据图标实际尺寸调整
+        StartBtn->setIconSize(QSize(35, 20));
+        UpdateSR();
+         // ✅ 恢复串口配置控件
+        portcombo->comboBox()->setEnabled(true);
+        baudratecombo->comboBox()->setEnabled(true);
+        stopbitscobo->comboBox()->setEnabled(true);
+        databitscobo->comboBox()->setEnabled(true);
+        paritycobo->comboBox()->setEnabled(true);
     }
 }
+
 void MainWindow::Save2File()
 {
     if (!recvEdit || recvEdit->toPlainText().isEmpty())
@@ -521,8 +533,7 @@ void MainWindow::Save2File()
     }
     QString fileName = QFileDialog::getSaveFileName(this, "保存接收数据", QDir::homePath(), "文本文件 (*.txt);;所有文件 (*)");
     if (fileName.isEmpty())
-        return; // 用户取消
-    // 将接收区纯文本写入文件
+        return;
     QFile file(fileName);
     if (file.open(QIODevice::WriteOnly | QIODevice::Text))
     {
@@ -536,6 +547,7 @@ void MainWindow::Save2File()
         QMessageBox::critical(this, "错误", "无法创建文件：" + file.errorString());
     }
 }
+
 void MainWindow::ImportFromFile()
 {
     QString fileName = QFileDialog::getOpenFileName(this,
@@ -558,10 +570,12 @@ void MainWindow::ImportFromFile()
         QMessageBox::critical(this, "错误", "无法打开文件：" + file.errorString());
     }
 }
+
 void MainWindow::ClearRecArea()
 {
     recvEdit->clear();
 }
+
 void MainWindow::Senddata()
 {
     if (!m_serial || !m_serial->isOpen())
@@ -575,7 +589,6 @@ void MainWindow::Senddata()
 
     QByteArray data;
 
-    // 1. 根据发送模式转换
     if (m_sendMode == ShowMode::Text)
     {
         if (m_sendCodec == Codec::UTF8)
@@ -583,12 +596,12 @@ void MainWindow::Senddata()
             data = text.toUtf8();
         }
         else
-        {                              // GBK
-            data = text.toLocal8Bit(); // Windows下为GBK
+        {
+            data = text.toLocal8Bit();
         }
     }
     else
-    { // Hex 模式
+    {
         QString hexStr = text.simplified();
         hexStr.remove(' ');
         data = QByteArray::fromHex(hexStr.toLatin1());
@@ -599,7 +612,6 @@ void MainWindow::Senddata()
         }
     }
 
-    // 2. 添加结束符
     switch (m_endstr)
     {
     case Endstr::CR:
@@ -615,51 +627,47 @@ void MainWindow::Senddata()
         break;
     }
 
-    // 3. 发送
     qint64 written = m_serial->write(data);
     if (written == -1)
     {
         QMessageBox::critical(this, "错误", "发送失败：" + m_serial->errorString());
-        return; // 发送失败，不进行回显和清空
+        return;
     }
 
-    // 4. 发送成功后的回显（只有成功才显示）
     QString displayText;
     if (m_sendMode == ShowMode::Text)
     {
-        displayText = text; // 原始文本
+        displayText = text;
     }
     else
     {
-        displayText = data.toHex(' ').toUpper(); // 实际发送的十六进制
+        displayText = data.toHex(' ').toUpper();
     }
 
-    // 添加时间戳（如果启用）
     if (timestamp)
     {
         QString timeStr = QDateTime::currentDateTime().toString("hh:mm:ss.zzz");
         displayText = "[" + timeStr + "] " + displayText;
     }
 
-    // 在接收区显示发送标记（统一用 [TX] 标识发送，[RX] 标识接收）
     recvEdit->append("[TX] " + displayText);
-
-    // 自动滚动到底部（可选）
     recvEdit->moveCursor(QTextCursor::End);
 
     qDebug() << "发送了" << written << "字节";
     m_sendtimes++;
     UpdateSR();
-    // 5. 自动清空发送区
+
     if (autoclear)
     {
         sendEdit->clear();
     }
 }
+
 void MainWindow::Clearsendedit()
 {
     sendEdit->clear();
 }
+
 void MainWindow::onReadyRead()
 {
     if (!m_serial || !m_serial->isOpen())
@@ -667,37 +675,33 @@ void MainWindow::onReadyRead()
     QByteArray data = m_serial->readAll();
     if (data.isEmpty())
         return;
+
     QString displayText;
     if (m_displayMode == ShowMode::Text)
     {
-        // 文本模式：按指定编码解码
-        if (m_receiveCodec == Codec::UTF8)
-        {
-            displayText = QString::fromUtf8(data);
-        }
+        // 使用QStringDecoder处理可能的分片数据，避免乱码
+        if (m_decoder)
+            displayText = m_decoder->decode(data);   // Qt6标准方法
         else
-        { // GBK
-            displayText = QString::fromLocal8Bit(data);
-        }
+            displayText = QString::fromUtf8(data);   // fallback
     }
     else
-    { // Hex 模式
+    {
         displayText = data.toHex(' ').toUpper();
-        // 可以让每个字节用大写字母，用空格分隔（toHex(' ') 已经加了空格）
     }
-    // 2. 添加时间戳（如果需要）
+
     if (timestamp)
     {
         QString timeStr = QDateTime::currentDateTime().toString("hh:mm:ss.zzz");
         displayText = "[" + timeStr + "] " + displayText;
     }
-    // 3. 显示到接收区
-    recvEdit->append("[RX]" + displayText);
+
+    recvEdit->append("[RX] " + displayText);
     m_receivedtimes++;
     UpdateSR();
-    // 4. 自动滚动到底部（可选，用户通常希望这样）
     recvEdit->moveCursor(QTextCursor::End);
 }
+
 void MainWindow::onAutoSaveFile()
 {
     if (!autosave)
@@ -705,10 +709,7 @@ void MainWindow::onAutoSaveFile()
     if (!recvEdit || recvEdit->toPlainText().isEmpty())
         return;
 
-    // 1. 定义保存目录
     QString saveDir = QApplication::applicationDirPath() + "/AutoSaveFiles/";
-
-    // 2. 确保目录存在（不存在则创建）
     QDir dir;
     if (!dir.mkpath(saveDir))
     {
@@ -716,11 +717,9 @@ void MainWindow::onAutoSaveFile()
         return;
     }
 
-    // 3. 生成带时间戳的文件名
     QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss");
     QString fileName = saveDir + QString("autosave_received_%1.txt").arg(timestamp);
 
-    // 4. 静默写入
     QFile file(fileName);
     if (file.open(QIODevice::WriteOnly | QIODevice::Text))
     {
@@ -734,20 +733,49 @@ void MainWindow::onAutoSaveFile()
         qWarning() << "自动保存失败:" << file.errorString();
     }
 }
+
 void MainWindow::Display2Begin()
 {
     addToolBar(Qt::TopToolBarArea, SCtoolBar);
     addToolBar(Qt::LeftToolBarArea, SHCtoolBar);
 }
+
 void MainWindow::UpdateSR()
 {
     statusLabel->setText(QString("串口状态: %1       ").arg(m_serial && m_serial->isOpen() ? "已连接" : "未连接") + "R:" + QString::number(m_receivedtimes) + "       S:" + QString::number(m_sendtimes));
 }
+
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     if (m_serial && m_serial->isOpen())
     {
         m_serial->close();
     }
-    event->accept(); // 继续关闭窗口
+    delete m_decoder;
+    m_decoder = nullptr;
+    event->accept();
+}
+
+void MainWindow::setDecoderForCodec(Codec codec)
+{
+    if (m_decoder) {
+        delete m_decoder;
+        m_decoder = nullptr;
+    }
+    if (codec == Codec::UTF8) {
+        m_decoder = new QStringDecoder(QStringDecoder::Utf8);
+    } else { // GBK
+        // 尝试通过名称创建 GBK 解码器
+        m_decoder = new QStringDecoder("GBK");
+        if (!m_decoder->isValid()) {
+            // GBK 不可用，尝试 GB18030
+            delete m_decoder;
+            m_decoder = new QStringDecoder("GB18030");
+            if (!m_decoder->isValid()) {
+                // 如果也不可用，回退到系统编码（Windows 下通常为 GBK）
+                delete m_decoder;
+                m_decoder = new QStringDecoder(QStringDecoder::System);
+            }
+        }
+    }
 }

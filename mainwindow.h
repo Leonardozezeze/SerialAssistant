@@ -6,6 +6,7 @@
 #include <QSerialPortInfo>
 #include <QSerialPort>
 #include <QStringList>
+#include <QStringDecoder>
 enum class ShowMode { Text, Hex };
 enum class Codec { UTF8, GBK };
 enum class Endstr {None,CR,NL,CRNL};
@@ -20,6 +21,8 @@ private:
     void ShowToolBar();
     void Receive_Area();
     void Show_StatusBar();
+    void setDecoderForCodec(Codec codec);
+    QStringDecoder *m_decoder = nullptr;
     QTimer *autoSaveTimer=nullptr;
     QToolBar *SCtoolBar =nullptr;
     QToolBar *SHCtoolBar =nullptr;
