@@ -9,7 +9,7 @@
 #include <QIntValidator>
 #include <QFrame>
 #include <QStringEncoder>
-
+#include <QKeyEvent>
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -28,9 +28,11 @@ MainWindow::MainWindow(QWidget *parent)
     autoSaveTimer = new QTimer(this);
     autoSaveTimer->setInterval(5 * 60 * 1000); // 5分钟
     connect(autoSaveTimer, &QTimer::timeout, this, &MainWindow::onAutoSaveFile);
-    
+
     // 初始化解码器为UTF-8
     setDecoderForCodec(Codec::UTF8);
+    // 安装事件过滤器，用于拦截回车键
+    sendEdit->installEventFilter(this);
 }
 
 void MainWindow::ShowMenu()
@@ -47,11 +49,9 @@ void MainWindow::ShowMenu()
     connect(importAction, &QAction::triggered, this, &MainWindow::ImportFromFile);
     connect(DefautPlay, &QAction::triggered, this, &MainWindow::Display2Begin);
     connect(helpAction, &QAction::triggered, this, [this]()
-            {
-    QMessageBox::about(this, "帮助", "教程文档正在制作ing....."); });
+            { QMessageBox::about(this, "帮助", "教程文档正在制作ing....."); });
     connect(aboutAction, &QAction::triggered, this, [this]()
-            {
-    QMessageBox::about(this, "关于", "串口助手 v1.0\n制作:Cassian"); });
+            { QMessageBox::about(this, "关于", "串口助手 v1.0\n制作:Cassian"); });
 }
 
 void MainWindow::ShowToolBar()
@@ -253,21 +253,21 @@ void MainWindow::ShowToolBar()
     connect(saveBtn, &QPushButton::clicked, this, &MainWindow::Save2File);
     connect(clearrecvBtn, &QPushButton::clicked, this, &MainWindow::ClearRecArea);
     connect(FileBtn, &QPushButton::clicked, this, &MainWindow::ImportFromFile);
-    
+
     connect(RTScheckBox, &QCheckBox::toggled, this, [this](bool checked)
             {
     if (m_serial && m_serial->isOpen()) {
         m_serial->setRequestToSend(checked);
         qDebug() << "RTS 设置为:" << (checked ? "高电平" : "低电平");
     } });
-    
+
     connect(DTRcheckBox, &QCheckBox::toggled, this, [this](bool checked)
             {
     if (m_serial && m_serial->isOpen()) {
         m_serial->setDataTerminalReady(checked);
         qDebug() << "DTR 设置为:" << (checked ? "高电平" : "低电平");
     } });
-    
+
     connect(savecheckBox, &QCheckBox::toggled, this, [this](bool checked)
             {
         autosave = checked;
@@ -277,22 +277,22 @@ void MainWindow::ShowToolBar()
     } else {
         autoSaveTimer->stop();
     } });
-    
+
     connect(timecheckBox, &QCheckBox::toggled, this, [this](bool checked)
             {
         timestamp=checked;
         qDebug()<<"时间戳:"<< (checked ? "启用" : "禁用"); });
-    
+
     connect(entercheckBox, &QCheckBox::toggled, this, [this](bool checked)
             {
         entersend=checked;
         qDebug()<<"回车发送:"<< (checked ? "启用" : "禁用"); });
-    
+
     connect(clearcheckBox, &QCheckBox::toggled, this, [this](bool checked)
             {
         autoclear=checked;
         qDebug()<<"自动清空:"<< (checked ? "启用" : "禁用"); });
-    
+
     connect(sendendcobo->comboBox(), &QComboBox::currentTextChanged, this, [this](const QString &text)
             {
         if(text=="None")
@@ -345,7 +345,7 @@ void MainWindow::Show_StatusBar()
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
     container->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    
+
     QLabel *readyLabel = new QLabel("Ready", this);
     statusLabel = new QLabel(this);
     UpdateSR();
@@ -515,7 +515,7 @@ void MainWindow::StartSerialPort(bool checked)
         StartBtn->setIcon(iconBlack);
         StartBtn->setIconSize(QSize(35, 20));
         UpdateSR();
-         // ✅ 恢复串口配置控件
+        // ✅ 恢复串口配置控件
         portcombo->comboBox()->setEnabled(true);
         baudratecombo->comboBox()->setEnabled(true);
         stopbitscobo->comboBox()->setEnabled(true);
@@ -688,9 +688,9 @@ void MainWindow::onReadyRead()
     {
         // 使用QStringDecoder处理可能的分片数据，避免乱码
         if (m_decoder)
-            displayText = m_decoder->decode(data);   // Qt6标准方法
+            displayText = m_decoder->decode(data); // Qt6标准方法
         else
-            displayText = QString::fromUtf8(data);   // fallback
+            displayText = QString::fromUtf8(data); // fallback
     }
     else
     {
@@ -711,12 +711,15 @@ void MainWindow::onReadyRead()
 
 void MainWindow::onAutoSaveFile()
 {
-    if (!autosave) return;
-    if (!recvEdit || recvEdit->toPlainText().isEmpty()) return;
+    if (!autosave)
+        return;
+    if (!recvEdit || recvEdit->toPlainText().isEmpty())
+        return;
 
     QString saveDir = QApplication::applicationDirPath() + "/AutoSaveFiles/";
     QDir dir;
-    if (!dir.mkpath(saveDir)) {
+    if (!dir.mkpath(saveDir))
+    {
         qWarning() << "无法创建自动保存目录:" << saveDir;
         return;
     }
@@ -725,7 +728,8 @@ void MainWindow::onAutoSaveFile()
     QString fileName = saveDir + QString("autosave_received_%1.txt").arg(timestamp);
 
     QFile file(fileName);
-    if (file.open(QIODevice::WriteOnly)) {
+    if (file.open(QIODevice::WriteOnly))
+    {
         // 写入 BOM
         file.write("\xEF\xBB\xBF");
 
@@ -736,7 +740,9 @@ void MainWindow::onAutoSaveFile()
 
         file.close();
         qDebug() << "自动保存成功（UTF-8 BOM）:" << fileName;
-    } else {
+    }
+    else
+    {
         qWarning() << "自动保存失败:" << file.errorString();
     }
 }
@@ -765,24 +771,48 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 void MainWindow::setDecoderForCodec(Codec codec)
 {
-    if (m_decoder) {
+    if (m_decoder)
+    {
         delete m_decoder;
         m_decoder = nullptr;
     }
-    if (codec == Codec::UTF8) {
+    if (codec == Codec::UTF8)
+    {
         m_decoder = new QStringDecoder(QStringDecoder::Utf8);
-    } else { // GBK
+    }
+    else
+    { // GBK
         // 尝试通过名称创建 GBK 解码器
         m_decoder = new QStringDecoder("GBK");
-        if (!m_decoder->isValid()) {
+        if (!m_decoder->isValid())
+        {
             // GBK 不可用，尝试 GB18030
             delete m_decoder;
             m_decoder = new QStringDecoder("GB18030");
-            if (!m_decoder->isValid()) {
+            if (!m_decoder->isValid())
+            {
                 // 如果也不可用，回退到系统编码（Windows 下通常为 GBK）
                 delete m_decoder;
                 m_decoder = new QStringDecoder(QStringDecoder::System);
             }
         }
     }
+}
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (obj == sendEdit && event->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
+            if (entersend) {
+                // 如果同时按下了 Shift，则允许输入换行（默认行为）
+                if (keyEvent->modifiers() & Qt::ShiftModifier) {
+                    return QMainWindow::eventFilter(obj, event);
+                }
+                // 否则发送数据，并阻止默认的换行操作
+                Senddata();
+                return true;
+            }
+        }
+    }
+    return QMainWindow::eventFilter(obj, event);
 }

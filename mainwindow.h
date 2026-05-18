@@ -61,4 +61,5 @@ private slots:
     void UpdateSR();
     void closeEvent(QCloseEvent *event);
 protected:
+bool eventFilter(QObject *obj, QEvent *event) override;  // 新增
 };
