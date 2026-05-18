@@ -534,14 +534,18 @@ void MainWindow::Save2File()
     QString fileName = QFileDialog::getSaveFileName(this, "保存接收数据", QDir::homePath(), "文本文件 (*.txt);;所有文件 (*)");
     if (fileName.isEmpty())
         return;
+
     QFile file(fileName);
-    if (file.open(QIODevice::WriteOnly | QIODevice::Text))
+    if (file.open(QIODevice::WriteOnly))
     {
-        QTextStream stream(&file);
-        // 明确设定编码为 UTF-8，并写入 BOM（可选）
-        stream.setEncoding(QStringConverter::Utf8);
-        stream.setGenerateByteOrderMark(true);  // 写入 UTF-8 BOM
-        stream << recvEdit->toPlainText();
+        // 1. 写入 UTF-8 BOM
+        file.write("\xEF\xBB\xBF");
+
+        // 2. 获取文本，移除可能存在的 '\0' 字符，再转换为 UTF-8
+        QString text = recvEdit->toPlainText();
+        text.remove(QChar('\0'));
+        file.write(text.toUtf8());
+
         file.close();
         QMessageBox::information(this, "成功", "文件已保存（UTF-8 编码）");
     }
@@ -707,15 +711,12 @@ void MainWindow::onReadyRead()
 
 void MainWindow::onAutoSaveFile()
 {
-    if (!autosave)
-        return;
-    if (!recvEdit || recvEdit->toPlainText().isEmpty())
-        return;
+    if (!autosave) return;
+    if (!recvEdit || recvEdit->toPlainText().isEmpty()) return;
 
     QString saveDir = QApplication::applicationDirPath() + "/AutoSaveFiles/";
     QDir dir;
-    if (!dir.mkpath(saveDir))
-    {
+    if (!dir.mkpath(saveDir)) {
         qWarning() << "无法创建自动保存目录:" << saveDir;
         return;
     }
@@ -724,18 +725,18 @@ void MainWindow::onAutoSaveFile()
     QString fileName = saveDir + QString("autosave_received_%1.txt").arg(timestamp);
 
     QFile file(fileName);
-    if (file.open(QIODevice::WriteOnly | QIODevice::Text))
-    {
-        QTextStream stream(&file);
-        // 显式设置为 UTF-8 编码，并写入 BOM（字节顺序标记）
-        stream.setEncoding(QStringConverter::Utf8);
-        stream.setGenerateByteOrderMark(true);
-        stream << recvEdit->toPlainText();
+    if (file.open(QIODevice::WriteOnly)) {
+        // 写入 BOM
+        file.write("\xEF\xBB\xBF");
+
+        // 获取文本并移除所有 '\0' 字符，再转为 UTF-8
+        QString cleanText = recvEdit->toPlainText();
+        cleanText.remove(QChar('\0'));
+        file.write(cleanText.toUtf8());
+
         file.close();
-        qDebug() << "自动保存成功（UTF-8）:" << fileName;
-    }
-    else
-    {
+        qDebug() << "自动保存成功（UTF-8 BOM）:" << fileName;
+    } else {
         qWarning() << "自动保存失败:" << file.errorString();
     }
 }
