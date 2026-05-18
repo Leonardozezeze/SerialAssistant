@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(Qt6Template VERSION 1.0.0 LANGUAGES CXX)
+project(SerialAssistant VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,7 +18,7 @@ if(WIN32)
 endif()
 
 # 查找 Qt6 组件（通用组件 + 串口）
-find_package(Qt6 REQUIRED COMPONENTS Widgets SerialPort)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets SerialPort)
 
 # 添加可执行文件（将 .qrc 文件直接加入，AUTORCC 会处理）
 add_executable(${PROJECT_NAME}
@@ -56,4 +56,4 @@ if(UNIX AND NOT APPLE)
 endif()
 
 # 链接 Qt6 库（所有平台通用）
-target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets Qt6::SerialPort)
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Core Qt6::Widgets Qt6::SerialPort)
