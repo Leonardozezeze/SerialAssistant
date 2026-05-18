@@ -27,6 +27,7 @@ add_executable(${PROJECT_NAME}
     mainwindow.h
     LabeledComboBox.h
     qtsource/resources.qrc   # 资源文件
+    qtsource/resources.rc
 )
 
 # Windows 专用设置
